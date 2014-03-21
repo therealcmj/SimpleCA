@@ -23,11 +23,11 @@ So when I needed certificates for a test environment I checked out OpenSSL's bui
 
 Usage Instructions
 ========
- To use:
+To use:
 
 Make a directory to contain the script and the keys and certs it will generate
-put this code into a file in that directory. I called it simpleca.sh, but use whatever name you like
-run it
+put this code into a file in that directory. I called it simpleca.sh, but use whatever name you like.
+Then just run it from there.
 
 The script takes one or more parameters that specify the CN of the cert you want it to generate. So
 
