@@ -31,7 +31,7 @@ run it
 
 The script takes one or more parameters that specify the CN of the cert you want it to generate. So
 
-$ ./simpleca.sh myserver.mydomain.com
+	$ ./simpleca.sh myserver.mydomain.com
 
 will make a cert for myserver.mydomain.com. It will also take more than one CN on the command line, so
 
