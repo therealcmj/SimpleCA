@@ -60,7 +60,7 @@ createderfiles() {
 umask 077
 
 # these next two lines figure out where the script is on disk
-SCRIPTPATH=`readlink -f $0`
+#SCRIPTPATH=`readlink -f $0`
 SCRIPTDIR=`dirname $0`
 
 # find keytool in our path
