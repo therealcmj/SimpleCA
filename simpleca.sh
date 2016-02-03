@@ -33,7 +33,7 @@ baseAnswers() {
     echo Oracle
     echo A-Team
     echo $1
-    if [ "$ISSUER" eq "" ]; then
+    if [ -n $ISSUER ]; then
 	echo root@`hostname`
     else
 	echo $ISSUER
