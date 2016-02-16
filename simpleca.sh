@@ -129,30 +129,37 @@ for certCN in $@ ; do
     CRTDER=$CRT.der
     
     ABORT=0
-    if [ -e $KEY ] ; then
-        echo " ERROR: Key file $KEY already exists"
-        ABORT=1
-    fi
-
-    if [ -e $REQ ] ; then
-        echo " ERROR: Request file $REQ already exists"
-        ABORT=1
-    fi
+	
+	# Commented out this block to allow for processing existing CRT file
+	# I may remove this in the future.
+	#
+    #if [ -e $KEY ] ; then
+    #    echo " ERROR: Key file $KEY already exists"
+    #    ABORT=1
+    #fi
+    #if [ -e $REQ ] ; then
+    #    echo " ERROR: Request file $REQ already exists"
+    #    ABORT=1
+    #fi
     if [ -e $CRT ] ; then
         echo " ERROR: Certificate file $CRT already exists"
-        ABORT=1
-    fi
-    
-    if [ $ABORT -eq 1 ] ; then
+    #    ABORT=1
+    #fi
+    #
+    #if [ $ABORT -eq 1 ] ; then
         echo ''
         echo "If you wish to recreate a certificate for you must delete"
         echo "any preexisting files for that CN before running this script."
         echo ''
         echo ''
     else
-        answers $certCN | openssl req -newkey rsa:1024 -keyout $KEY -nodes -days 365 -out $REQ  2> /dev/null
- 
-        # at this point we have a key file, but the cert is not signed by the CA
+	    if [ -e $REQ ] ; then
+			echo Reprocessing existing cert request $certCN.crt
+		else
+        	answers $certCN | openssl req -newkey rsa:1024 -keyout $KEY -nodes -days 365 -out $REQ  2> /dev/null
+		fi
+
+        # at this point we have a cert request file, but the cert is not signed by the CA
         openssl x509 -req -in $REQ -out $CRT -days 365 -CA $CACRTfile -CAkey $CAKEYfile -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
         
         # We now have a req, key and crt files which contain PEM format
