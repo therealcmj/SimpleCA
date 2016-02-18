@@ -3,7 +3,7 @@
 # a very simple cert authority
 # now with JKS support!
 #
-# Copyright 2010-2014
+# Copyright 2010-2016
 # Chris Johnson christopher.johnson@oracle.com
 # Oracle
 #
@@ -34,9 +34,9 @@ baseAnswers() {
     echo A-Team
     echo $1
     if [ -n $ISSUER ]; then
-	echo root@`hostname`
+        echo root@`hostname`
     else
-	echo $ISSUER
+        echo $ISSUER
     fi
 }
 
@@ -129,10 +129,10 @@ for certCN in $@ ; do
     CRTDER=$CRT.der
     
     ABORT=0
-	
-	# Commented out this block to allow for processing existing CRT file
-	# I may remove this in the future.
-	#
+
+    # Commented out this block to allow for processing existing REQ file
+    # I may remove this in the future.
+    #
     #if [ -e $KEY ] ; then
     #    echo " ERROR: Key file $KEY already exists"
     #    ABORT=1
@@ -153,11 +153,12 @@ for certCN in $@ ; do
         echo ''
         echo ''
     else
-	    if [ -e $REQ ] ; then
-			echo Reprocessing existing cert request $certCN.crt
-		else
-        	answers $certCN | openssl req -newkey rsa:1024 -keyout $KEY -nodes -days 365 -out $REQ  2> /dev/null
-		fi
+        if [ -e $REQ ] ; then
+            echo Processing existing cert request $certCN.crt
+        else
+			echo Generating CSR for $certCN
+            answers $certCN | openssl req -newkey rsa:1024 -keyout $KEY -nodes -days 365 -out $REQ  2> /dev/null
+        fi
 
         # at this point we have a cert request file, but the cert is not signed by the CA
         openssl x509 -req -in $REQ -out $CRT -days 365 -CA $CACRTfile -CAkey $CAKEYfile -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
@@ -169,41 +170,44 @@ for certCN in $@ ; do
         # respectively.
 
         echo "Certificate created."
-        ls -l $KEY $REQ $CRT
+        ls -l $certCN*
  
         echo 'Certificate information:'
         openssl x509 -in $CRT -noout -issuer -subject -serial
-        
-        # generate a pkcs12 file
-        openssl pkcs12 -export -in $CRT -inkey $KEY -certfile $CACRTfile -name $certCN -out $P12 -password pass:$PASSPHRASE -nodes
-        
-        echo P12 info:
-        ls -l $P12
-        #openssl pkcs12 -in $P12 -info -password pass:$PASSPHRASE -passin pass:$PASSPHRASE -nodes
 
-        # if we have keytool we also need to create a jks file
-        if [ "$KEYTOOL" != "" ] ; then
-            echo "Will create JKS file as well..."
-            createderfiles $certCN
-            
-            echo "Creating $JKS"
-            # step 1: copy the CA keystore into the new one
-            cp $CAJKSfile $JKS
-            
-            # step 2: take the pkcs12 file and import it right into a JKS
-            keytool -importkeystore \
-                -deststorepass $PASSPHRASE \
-                -destkeypass $PASSPHRASE \
-                -destkeystore $JKS \
-                -srckeystore $P12 \
-                -srcstoretype PKCS12 \
-                -srcstorepass $PASSPHRASE \
-                -alias $certCN
+        if [ ! -e $KEY ] ; then
+            echo No private key available - no .p12 or JKS file will be generated
+        else
+            # generate a pkcs12 file with the private key in it
+            openssl pkcs12 -export -in $CRT -inkey $KEY -certfile $CACRTfile -name $certCN -out $P12 -password pass:$PASSPHRASE -nodes
+			
+            echo P12 info:
+            ls -l $P12
+            #openssl pkcs12 -in $P12 -info -password pass:$PASSPHRASE -passin pass:$PASSPHRASE -nodes
 
-            ls -l $JKS
+            # if we have keytool we also need to create a jks file
+            if [ "$KEYTOOL" != "" ] ; then
+                echo "Will create JKS file as well..."
+                createderfiles $certCN
+                
+                echo "Creating $JKS"
+                # step 1: copy the CA keystore into the new one
+                cp $CAJKSfile $JKS
+                
+                # step 2: take the pkcs12 file and import it right into a JKS
+                keytool -importkeystore \
+                    -deststorepass $PASSPHRASE \
+                    -destkeypass $PASSPHRASE \
+                    -destkeystore $JKS \
+                    -srckeystore $P12 \
+                    -srcstoretype PKCS12 \
+                    -srcstorepass $PASSPHRASE \
+                    -alias $certCN
+
+                ls -l $JKS
             
-            keytool -list -keystore $JKS -storepass $PASSPHRASE
+                keytool -list -keystore $JKS -storepass $PASSPHRASE
+            fi
         fi
-    
     fi    
 done

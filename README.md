@@ -37,10 +37,45 @@ will make a cert for myserver.mydomain.com. It will also take more than one CN o
 
 	$ ./simpleca.sh myserver.mydomain.com login.mydomain.com
 
-will make a certificate for myserver.mydomain.com and another one for login.mydomain.com. 
+will make a certificate for myserver.mydomain.com and another one for login.mydomain.com.
+
+The script puts the generated private key, request (CSR), and certificate in the same directory in files
+named .key, .req, .crt, .jks, and a number of other forms for other purposes. For example running it with
+"myserver.mydomain.com" will generate the following files:
+- myserver.mydomain.com.crt
+- myserver.mydomain.com.crt.der
+- myserver.mydomain.com.jks
+- myserver.mydomain.com.key
+- myserver.mydomain.com.key.der
+- myserver.mydomain.com.p12
+- myserver.mydomain.com.req
+
 
 You can also make certificates for users - just put the username as the argument. Like so:
 	$ ./simpleca.sh myserver.mydomain.com christopher.johnson@oracle.com
+
+
+And finally you can also use this script to process certificate signing requests (CSR) generated elsewhere.
+Simply generate the CSR as normal, drop it in the same directory with the extension .req, and run the script
+with the name on the command line as normal:
+	Chriss-MacBook-Pro:SimpleCA cmj$ ls -l myserver.mydomain.com.*
+	-r--------  1 cmj  staff  737 Feb 18 14:04 myserver.mydomain.com.req
+	Chriss-MacBook-Pro:SimpleCA cmj$ ./simpleca.sh myserver.mydomain.com
+	Certificate for CN "myserver.mydomain.com"
+	=============================================
+	Processing existing cert request myserver.mydomain.com.crt
+	Certificate created.
+	-rw-------  1 cmj  staff  1017 Feb 18 14:09 myserver.mydomain.com.crt
+	-r--------  1 cmj  staff   737 Feb 18 14:04 myserver.mydomain.com.req
+	Certificate information:
+	issuer= /C=US/ST=Massachusetts/L=Boston/O=Oracle/OU=A-Team/CN=My Cert Authority/emailAddress=root@Chriss-MacBook-Pro.local
+	subject= /C=US/ST=Massachusetts/L=Boston/O=Oracle/OU=A-Team/CN=myserver.mydomain.com/emailAddress=root@Chriss-MacBook-Pro.local
+	serial=8F70BDCB0E2FE32F
+	No private key available - no .p12 or JKS file will be generated
+	Chriss-MacBook-Pro:SimpleCA cmj$ ls -l myserver.mydomain.com.*
+	-rw-------  1 cmj  staff  1017 Feb 18 14:09 myserver.mydomain.com.crt
+	-r--------  1 cmj  staff   737 Feb 18 14:04 myserver.mydomain.com.req
+
 
 Plans
 ========
