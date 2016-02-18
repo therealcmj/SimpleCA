@@ -58,6 +58,7 @@ You can also make certificates for users - just put the username as the argument
 And finally you can also use this script to process certificate signing requests (CSR) generated elsewhere.
 Simply generate the CSR as normal, drop it in the same directory with the extension .req, and run the script
 with the name on the command line as normal:
+
 	Chriss-MacBook-Pro:SimpleCA cmj$ ls -l myserver.mydomain.com.*
 	-r--------  1 cmj  staff  737 Feb 18 14:04 myserver.mydomain.com.req
 	Chriss-MacBook-Pro:SimpleCA cmj$ ./simpleca.sh myserver.mydomain.com
