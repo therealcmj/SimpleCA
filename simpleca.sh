@@ -49,10 +49,10 @@ answers() {
 # No need to edit past here
 
 createderfiles() {
-    echo Creating .der files for $1
+    echo Creating .der files for \"$1\"
     
-    openssl pkcs8 -topk8 -nocrypt -in $1.key -inform PEM -out $1.key.der -outform DER
-    openssl x509 -in $1.crt -inform PEM -out $1.crt.der -outform DER
+    openssl pkcs8 -topk8 -nocrypt -in "$1".key -inform PEM -out "$1".key.der -outform DER
+    openssl x509 -in "$1".crt -inform PEM -out "$1".crt.der -outform DER
 }
 
 
@@ -114,20 +114,20 @@ if [ $# -eq 0 ] ; then
     exit -1
 fi
 
-for certCN in $@ ; do
+for certCN in "$@" ; do
     echo Certificate for CN \"$certCN\"
     echo =============================================
     
-    KEY=$certCN.key
-    CRT=$certCN.crt
-    REQ=$certCN.req
-    P12=$certCN.p12
-    JKS=$certCN.jks
-    
+    KEY="$certCN".key
+    CRT="$certCN".crt
+    REQ="$certCN".req
+    P12="$certCN".p12
+    JKS="$certCN".jks
+
     # files we can delete later
-    KEYDER=$KEY.der
-    CRTDER=$CRT.der
-    
+    KEYDER="$KEY".der
+    CRTDER="$CRT".der
+
     ABORT=0
 
     # Commented out this block to allow for processing existing REQ file
@@ -141,7 +141,7 @@ for certCN in $@ ; do
     #    echo " ERROR: Request file $REQ already exists"
     #    ABORT=1
     #fi
-    if [ -e $CRT ] ; then
+    if [ -e "$CRT" ] ; then
         echo " ERROR: Certificate file $CRT already exists"
     #    ABORT=1
     #fi
@@ -153,16 +153,16 @@ for certCN in $@ ; do
         echo ''
         echo ''
     else
-        if [ -e $REQ ] ; then
+        if [ -e "$REQ" ] ; then
             echo Processing existing cert request $certCN.crt
         else
-			echo Generating CSR for $certCN
-            answers $certCN | openssl req -newkey rsa:1024 -keyout $KEY -nodes -days 365 -out $REQ  2> /dev/null
+			echo Generating CSR for \"$certCN\"
+            answers "$certCN" | openssl req -newkey rsa:1024 -keyout "$KEY" -nodes -days 365 -out "$REQ"  2> /dev/null
         fi
-
-        # at this point we have a cert request file, but the cert is not signed by the CA
-        openssl x509 -req -in $REQ -out $CRT -days 365 -CA $CACRTfile -CAkey $CAKEYfile -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
         
+        # at this point we have a cert request file, but the cert is not signed by the CA
+        openssl x509 -req -in "$REQ" -out "$CRT" -days 365 -CA "$CACRTfile" -CAkey "$CAKEYfile" -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
+
         # We now have a req, key and crt files which contain PEM format
         # x.509 certificate request
         # x.509 private key
@@ -170,44 +170,44 @@ for certCN in $@ ; do
         # respectively.
 
         echo "Certificate created."
-        ls -l $certCN*
- 
-        echo 'Certificate information:'
-        openssl x509 -in $CRT -noout -issuer -subject -serial
+        ls -l "$certCN"*
 
-        if [ ! -e $KEY ] ; then
+        echo 'Certificate information:'
+        openssl x509 -in "$CRT" -noout -issuer -subject -serial
+
+        if [ ! -e "$KEY" ] ; then
             echo No private key available - no .p12 or JKS file will be generated
         else
             # generate a pkcs12 file with the private key in it
-            openssl pkcs12 -export -in $CRT -inkey $KEY -certfile $CACRTfile -name $certCN -out $P12 -password pass:$PASSPHRASE -nodes
-			
-            echo P12 info:
-            ls -l $P12
+            openssl pkcs12 -export -in "$CRT" -inkey "$KEY" -certfile "$CACRTfile" -name "$certCN" -out "$P12" -password pass:$PASSPHRASE -nodes
+
+            #echo P12 info:
+            #ls -l $P12
             #openssl pkcs12 -in $P12 -info -password pass:$PASSPHRASE -passin pass:$PASSPHRASE -nodes
 
             # if we have keytool we also need to create a jks file
             if [ "$KEYTOOL" != "" ] ; then
                 echo "Will create JKS file as well..."
-                createderfiles $certCN
-                
+                createderfiles "$certCN"
+
                 echo "Creating $JKS"
                 # step 1: copy the CA keystore into the new one
-                cp $CAJKSfile $JKS
-                
+                cp "$CAJKSfile" "$JKS"
+
                 # step 2: take the pkcs12 file and import it right into a JKS
                 keytool -importkeystore \
                     -deststorepass $PASSPHRASE \
                     -destkeypass $PASSPHRASE \
-                    -destkeystore $JKS \
-                    -srckeystore $P12 \
+                    -destkeystore "$JKS" \
+                    -srckeystore "$P12" \
                     -srcstoretype PKCS12 \
                     -srcstorepass $PASSPHRASE \
-                    -alias $certCN
+                    -alias "$certCN"
 
-                ls -l $JKS
-            
-                keytool -list -keystore $JKS -storepass $PASSPHRASE
+                ls -l "$JKS"
+
+                keytool -list -keystore "$JKS" -storepass $PASSPHRASE
             fi
         fi
-    fi    
+    fi
 done
