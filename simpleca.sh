@@ -81,8 +81,18 @@ CERTDN_FORMAT_SERVER='/C=US/O=Oracle/OU=Server Cert Authority/CN=%1'
 # User Cert DN format:
 CERTDN_FORMAT_USER='/C=US/O=Oracle/OU=A-Team/CN=%1'
 
+# location of OpenSSL configuration file
+# if you are not sure what value to use then run "openssl version -d"
+# copy the value from there and append "openssl.cnf"
+# for example:
+#  $ openssl version -d
+#  OPENSSLDIR: "/usr/local/etc/openssl"
+#
+# then the setting should be OPENSSL_CONF="/usr/local/etc/openssl/openssl.cnf"
+OPENSSL_CONF="/etc/ssl/openssl.cnf"
+
 # You shouldn't need to edit this
-CONFIG_VERSION=1
+CONFIG_VERSION=2
 
 # debug is really just for me to get more info as the script runs
 # it probably won't do you any good
@@ -104,7 +114,7 @@ __ENDS__
     # If you make other edits which don't involve adding/removing
     # a setting, such as changing instructional comments, you don't
     # need to increment the config version number.
-    local expectedConfigVersion=1
+    local expectedConfigVersion=2
     [ "$CONFIG_VERSION" == "$expectedConfigVersion" ] || {
             logMsg "ERROR: You $cfgFileName has the wrong version"
             logMsg "Expected version ${expectedConfigVersion}, got version ${CONFIG_VERSION}"
@@ -177,6 +187,16 @@ fi
 
 # OK, now try to load the config file
 LoadConfigFile
+
+# TODO: add additional sanity checks on inputs
+
+if [ ! -e ${OPENSSL_CONF} ]; then
+  logMsg "OpenSSL config file not found in expected location:"
+  logMsg "$OPENSSL_CONF"
+  logMsg ""
+  logMsg "Please update config file and then run again."
+  exit 1
+fi
 
 if [ ! -e $CACRTfile -o ! -e $CAKEYfile ]; then
     rm -f $CACRTfile $CAKEYfile $CAP12file
@@ -265,11 +285,11 @@ for certCN in "$@" ; do
                 debugMsg Cert DN: ${CERTDN}
 
                 openssl req -newkey rsa:1024 -keyout "$KEY" -nodes -days 365 -out "$REQ" -subj "${CERTDN}" -reqexts ${CERT_TYPE} \
-                    -config <(cat /etc/ssl/openssl.cnf <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) 2> /dev/null
+                    -config <(cat ${OPENSSL_CONF} <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) 2> /dev/null
             fi
             
             # at this point we have a cert request file, but the cert is not signed by the CA
-            openssl x509 -req -in "$REQ" -out "$CRT" -days 365 -extensions ${CERT_TYPE} -extfile <(cat /etc/ssl/openssl.cnf <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) -CA "$CACRTfile" -CAkey "$CAKEYfile" -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
+            openssl x509 -req -in "$REQ" -out "$CRT" -days 365 -extensions ${CERT_TYPE} -extfile <(cat ${OPENSSL_CONF} <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) -CA "$CACRTfile" -CAkey "$CAKEYfile" -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
 
             # We now have a req, key and crt files which contain PEM format
             # x.509 certificate request
@@ -278,7 +298,7 @@ for certCN in "$@" ; do
             # respectively.
 
             logMsg "Certificate created."
-
+            logMsg ""
             logMsg 'Certificate information:'
             openssl x509 -in "$CRT" -noout -issuer -subject -serial
 
@@ -290,7 +310,8 @@ for certCN in "$@" ; do
                 
                 # if we have keytool we also need to create a jks file
                 if [ "$KEYTOOL" != "" ] ; then
-                    debugMsg "Will create JKS file as well..."
+                    debugMsg ""
+                    debugMsg "Creating JKS file:"
                     createderfiles "$certCN"
                     
                     debugMsg "Creating $JKS"
