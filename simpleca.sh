@@ -9,7 +9,7 @@
 #
 # a simple Certificate Authority script
 #
-# Copyright 2010-2018
+# Copyright 2010-2021
 # Chris Johnson christopher.johnson@oracle.com
 # Oracle
 #
@@ -201,7 +201,7 @@ fi
 if [ ! -e $CACRTfile -o ! -e $CAKEYfile ]; then
     rm -f $CACRTfile $CAKEYfile $CAP12file
     logMsg "Creating cert authority key & certificate"
-    openssl req -newkey rsa:1024 -keyout $CAKEYfile -nodes -x509 -days 3650 -out $CACRTfile -subj "${CERT_ISSUER}" 2> /dev/null
+    openssl req -newkey rsa:4096 -keyout $CAKEYfile -nodes -x509 -days 3650 -out $CACRTfile -subj "${CERT_ISSUER}" 2> /dev/null
 fi
 
 if [ "$KEYTOOL" != "" ] ; then
@@ -284,13 +284,21 @@ for certCN in "$@" ; do
                 fi
                 debugMsg Cert DN: ${CERTDN}
 
-                openssl req -newkey rsa:1024 -keyout "$KEY" -nodes -days 365 -out "$REQ" -subj "${CERTDN}" -reqexts ${CERT_TYPE} \
-                    -config <(cat ${OPENSSL_CONF} <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) 2> /dev/null
-            fi
-            
-            # at this point we have a cert request file, but the cert is not signed by the CA
-            openssl x509 -req -in "$REQ" -out "$CRT" -days 365 -extensions ${CERT_TYPE} -extfile <(cat ${OPENSSL_CONF} <(printf "[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) -CA "$CACRTfile" -CAkey "$CAKEYfile" -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
+                openssl req \
+                    -newkey rsa:4096 \
+                    -keyout "$KEY" \
+                    -nodes \
+                    -days 365 \
+                    -out "$REQ" \
+                    -subj "${CERTDN}" \
+                    -reqexts ${CERT_TYPE} \
+                    -addext "subjectAltName = DNS:${certCN}" \
+                    -config <(cat ${OPENSSL_CONF} <(printf "[SERVER]\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:${certCN}\n[USER]\nextendedKeyUsage=clientAuth\n")) 2> /dev/null
 
+            fi
+
+            # at this point we have a cert request file, but the cert is not signed by the CA
+            openssl x509 -req -in "$REQ" -out "$CRT" -days 365 -extensions ${CERT_TYPE} -extfile <(cat ${OPENSSL_CONF} <(printf "[CA_default]\ncopy_extensions=copy\n[SERVER]\nextendedKeyUsage=serverAuth\n[USER]\nextendedKeyUsage=clientAuth\n")) -CA "$CACRTfile" -CAkey "$CAKEYfile" -CAcreateserial -CAserial $CABASEfile.serial -days 365 2> /dev/null
             # We now have a req, key and crt files which contain PEM format
             # x.509 certificate request
             # x.509 private key
